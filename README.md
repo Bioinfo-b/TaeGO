@@ -19,6 +19,21 @@ Human and mouse remain independent analyses even when `-t both` is used; TaeGO
 does not merge their GO hypothesis spaces before testing. TaeGO does **not**
 claim to support arbitrary plant or animal inputs.
 
+## Download
+
+The latest TaeGO release is available from GitHub Releases:
+
+https://github.com/Bioinfo-b/TaeGO/releases
+
+Current release:
+
+- TaeGO v1.1.0
+- Platform: Linux x86_64
+- Installer:
+  `TaeGO-1.1.0-Linux-x86_64.sh`
+
+SHA256 verification is provided with the release assets.
+
 ## Installation requirements
 
 TaeGO is distributed in two forms:
