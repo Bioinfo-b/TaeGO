@@ -1,0 +1,483 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TAEGO_VERSION="1.1.0"
+
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+BIN_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+PREFIX="$(cd "$BIN_DIR/.." && pwd)"
+
+if [[ -d "$PREFIX/scripts" && -d "$PREFIX/data" ]]; then
+    TAEGO_ROOT="$PREFIX"
+else
+    TAEGO_ROOT="$PREFIX/share/taego/$TAEGO_VERSION"
+fi
+
+if [[ -x "$BIN_DIR/Rscript" ]]; then
+    RSCRIPT="$BIN_DIR/Rscript"
+else
+    RSCRIPT="$(command -v Rscript || true)"
+fi
+
+show_version() {
+    echo "TaeGO ${TAEGO_VERSION}"
+}
+
+show_help() {
+    cat <<EOF
+TaeGO ${TAEGO_VERSION}
+Triticum aestivum Gene Ontology toolkit
+
+Usage:
+  taego <command> [options]
+  taego [global option]
+
+Commands:
+  wheat          Wheat GO enrichment
+  wheat-mammal   Animal-derived GO projection to wheat + wheat-space enrichment
+  doctor         Check TaeGO runtime and dependencies
+  info           Show TaeGO environment and annotation information
+  validate       Verify TaeGO files and data integrity
+  citation       Show citation information
+
+Global options:
+  -h, --help       Show this help message
+  -v, --version    Show TaeGO version
+EOF
+}
+
+show_wheat_help() {
+    cat <<EOF
+TaeGO ${TAEGO_VERSION} - wheat
+
+TGT-calibrated wheat Gene Ontology enrichment using TaeGO's
+six-source IWGSC RefSeq v2.1 annotation resource.
+
+Usage:
+  taego wheat -i <genes.txt> -o <output_prefix> [options]
+  taego wheat <genes.txt> -o <output_prefix> [options]   # compatibility
+
+Required:
+  -i, --input FILE          Foreground wheat gene list (canonical form)
+  -o, --output PREFIX       Output prefix
+
+Optional:
+  -b, --background FILE     Custom wheat background gene list
+  -h, --help                Show this help message
+EOF
+}
+
+show_wheat_mammal_help() {
+    cat <<EOF
+TaeGO ${TAEGO_VERSION} - wheat-mammal
+
+Animal-derived GO projection to wheat followed by wheat-space enrichment.
+Human and mouse are evaluated independently; this command is a convenience wrapper.
+
+Usage:
+  taego wheat-mammal -i <genes.txt> -o <output_prefix> [options]
+  taego wheat-mammal <genes.txt> -o <output_prefix> [options]  # compatibility
+
+Required:
+  -i, --input FILE          Foreground wheat gene list (canonical form)
+  -o, --output PREFIX       Output prefix
+
+Optional:
+  -b, --background FILE     Custom wheat background gene list
+  -t, --target VALUE        human|mouse|both (default: both)
+  -h, --help                Show this help message
+EOF
+}
+
+show_wheat_species_help() {
+    local species="$1"
+    local label
+    case "$species" in
+        human) label="Human-derived" ;;
+        mouse) label="Mouse-derived" ;;
+        *) return 2 ;;
+    esac
+    cat <<EOF
+TaeGO ${TAEGO_VERSION} - wheat-${species}
+
+${label} experimental GO annotations projected through direct OMA orthology
+to wheat genes, followed by TGT-calibrated wheat-space GO enrichment.
+
+Usage:
+  taego wheat-${species} -i <genes.txt> -o <output_prefix> [options]
+  taego wheat-${species} <genes.txt> -o <output_prefix> [options]  # compatibility
+
+Required:
+  -i, --input FILE          Foreground wheat gene list (IWGSC RefSeq v2.1)
+  -o, --output PREFIX       Output prefix
+
+Optional:
+  -b, --background FILE     Custom wheat background gene list
+  -h, --help                Show this help message
+EOF
+}
+
+require_runtime_and_file() {
+    local script="$1"
+    [[ -n "$RSCRIPT" && -x "$RSCRIPT" ]] || {
+        echo "TaeGO: Rscript was not found in the TaeGO environment." >&2
+        return 2
+    }
+    [[ -f "$script" ]] || {
+        echo "TaeGO: analysis script not found: $script" >&2
+        return 2
+    }
+}
+
+parse_wheat_args() {
+    PARSED_INPUT=""
+    PARSED_OUTPUT=""
+    PARSED_BACKGROUND=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -i|--input)
+                [[ $# -ge 2 ]] || { echo "TaeGO: missing value for '$1'" >&2; return 2; }
+                [[ -z "$PARSED_INPUT" ]] || { echo "TaeGO: foreground specified twice." >&2; return 2; }
+                PARSED_INPUT="$2"
+                shift 2
+                ;;
+            -o|--output)
+                [[ $# -ge 2 ]] || { echo "TaeGO: missing value for '$1'" >&2; return 2; }
+                PARSED_OUTPUT="$2"
+                shift 2
+                ;;
+            -b|--background)
+                [[ $# -ge 2 ]] || { echo "TaeGO: missing value for '$1'" >&2; return 2; }
+                PARSED_BACKGROUND="$2"
+                shift 2
+                ;;
+            -h|--help)
+                show_wheat_help
+                return 10
+                ;;
+            --)
+                shift
+                while [[ $# -gt 0 ]]; do
+                    [[ -z "$PARSED_INPUT" ]] || { echo "TaeGO: foreground specified twice." >&2; return 2; }
+                    PARSED_INPUT="$1"
+                    shift
+                done
+                ;;
+            -*)
+                echo "TaeGO: unknown wheat option '$1'" >&2
+                echo "Run 'taego wheat -h' for help." >&2
+                return 2
+                ;;
+            *)
+                [[ -z "$PARSED_INPUT" ]] || { echo "TaeGO: foreground specified twice." >&2; return 2; }
+                PARSED_INPUT="$1"
+                shift
+                ;;
+        esac
+    done
+    return 0
+}
+
+parse_wheat_mammal_args() {
+    PARSED_INPUT=""
+    PARSED_OUTPUT=""
+    PARSED_BACKGROUND=""
+    PARSED_TARGET="both"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -i|--input)
+                [[ $# -ge 2 ]] || { echo "TaeGO: missing value for '$1'" >&2; return 2; }
+                [[ -z "$PARSED_INPUT" ]] || { echo "TaeGO: foreground specified twice." >&2; return 2; }
+                PARSED_INPUT="$2"
+                shift 2
+                ;;
+            -o|--output)
+                [[ $# -ge 2 ]] || { echo "TaeGO: missing value for '$1'" >&2; return 2; }
+                PARSED_OUTPUT="$2"
+                shift 2
+                ;;
+            -b|--background)
+                [[ $# -ge 2 ]] || { echo "TaeGO: missing value for '$1'" >&2; return 2; }
+                PARSED_BACKGROUND="$2"
+                shift 2
+                ;;
+            -t|--target)
+                [[ $# -ge 2 ]] || { echo "TaeGO: missing value for '$1'" >&2; return 2; }
+                case "$2" in human|mouse|both) PARSED_TARGET="$2" ;; *)
+                    echo "TaeGO: --target must be human, mouse, or both." >&2
+                    return 2
+                    ;;
+                esac
+                shift 2
+                ;;
+            -h|--help)
+                show_wheat_mammal_help
+                return 10
+                ;;
+            --)
+                shift
+                while [[ $# -gt 0 ]]; do
+                    [[ -z "$PARSED_INPUT" ]] || { echo "TaeGO: foreground specified twice." >&2; return 2; }
+                    PARSED_INPUT="$1"
+                    shift
+                done
+                ;;
+            -*)
+                echo "TaeGO: unknown wheat-mammal option '$1'" >&2
+                echo "Run 'taego wheat-mammal -h' for help." >&2
+                return 2
+                ;;
+            *)
+                [[ -z "$PARSED_INPUT" ]] || { echo "TaeGO: foreground specified twice." >&2; return 2; }
+                PARSED_INPUT="$1"
+                shift
+                ;;
+        esac
+    done
+    return 0
+}
+
+run_wheat() {
+    shift
+    if [[ $# -eq 0 ]]; then show_wheat_help; return 0; fi
+    local rc=0
+    parse_wheat_args "$@" || rc=$?
+    [[ "$rc" -eq 10 ]] && return 0
+    [[ "$rc" -eq 0 ]] || return "$rc"
+
+    [[ -n "$PARSED_INPUT" ]] || { echo "TaeGO: wheat requires -i/--input FILE." >&2; return 2; }
+    [[ -n "$PARSED_OUTPUT" ]] || { echo "TaeGO: wheat requires -o/--output PREFIX." >&2; return 2; }
+    [[ -f "$PARSED_INPUT" ]] || { echo "TaeGO: foreground file not found: $PARSED_INPUT" >&2; return 2; }
+    if [[ -n "$PARSED_BACKGROUND" && ! -f "$PARSED_BACKGROUND" ]]; then
+        echo "TaeGO: background file not found: $PARSED_BACKGROUND" >&2
+        return 2
+    fi
+
+    local script="$TAEGO_ROOT/scripts/wheat_GO_enrichment.R"
+    require_runtime_and_file "$script" || return $?
+    if [[ -n "$PARSED_BACKGROUND" ]]; then
+        "$RSCRIPT" "$script" "$PARSED_INPUT" "$PARSED_OUTPUT" "$PARSED_BACKGROUND"
+    else
+        "$RSCRIPT" "$script" "$PARSED_INPUT" "$PARSED_OUTPUT"
+    fi
+}
+
+run_wheat_mammal() {
+    shift
+    if [[ $# -eq 0 ]]; then show_wheat_mammal_help; return 0; fi
+    local rc=0
+    parse_wheat_mammal_args "$@" || rc=$?
+    [[ "$rc" -eq 10 ]] && return 0
+    [[ "$rc" -eq 0 ]] || return "$rc"
+
+    [[ -n "$PARSED_INPUT" ]] || { echo "TaeGO: wheat-mammal requires -i/--input FILE." >&2; return 2; }
+    [[ -n "$PARSED_OUTPUT" ]] || { echo "TaeGO: wheat-mammal requires -o/--output PREFIX." >&2; return 2; }
+    [[ -f "$PARSED_INPUT" ]] || { echo "TaeGO: foreground file not found: $PARSED_INPUT" >&2; return 2; }
+    if [[ -n "$PARSED_BACKGROUND" && ! -f "$PARSED_BACKGROUND" ]]; then
+        echo "TaeGO: background file not found: $PARSED_BACKGROUND" >&2
+        return 2
+    fi
+
+    local script="$TAEGO_ROOT/scripts/wheat_mammal_conserved_function.R"
+    require_runtime_and_file "$script" || return $?
+    local bg_arg="-"
+    [[ -n "$PARSED_BACKGROUND" ]] && bg_arg="$PARSED_BACKGROUND"
+    "$RSCRIPT" "$script" "$PARSED_INPUT" "$PARSED_OUTPUT" "$bg_arg" "$PARSED_TARGET"
+}
+
+# Historical CLI helper retained for source auditability only.
+# It is intentionally not dispatched by TaeGO 1.1.0.
+run_wheat_mammal_species() {
+    local species="$1"
+    shift
+    if [[ $# -eq 0 ]]; then show_wheat_species_help "$species"; return 0; fi
+    if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+        show_wheat_species_help "$species"
+        return 0
+    fi
+    local rc=0
+    parse_wheat_args "$@" || rc=$?
+    [[ "$rc" -eq 10 ]] && { show_wheat_species_help "$species"; return 0; }
+    [[ "$rc" -eq 0 ]] || return "$rc"
+
+    [[ -n "$PARSED_INPUT" ]] || { echo "TaeGO: wheat-${species} requires -i/--input FILE." >&2; return 2; }
+    [[ -n "$PARSED_OUTPUT" ]] || { echo "TaeGO: wheat-${species} requires -o/--output PREFIX." >&2; return 2; }
+    [[ -f "$PARSED_INPUT" ]] || { echo "TaeGO: foreground file not found: $PARSED_INPUT" >&2; return 2; }
+    if [[ -n "$PARSED_BACKGROUND" && ! -f "$PARSED_BACKGROUND" ]]; then
+        echo "TaeGO: background file not found: $PARSED_BACKGROUND" >&2
+        return 2
+    fi
+
+    local script="$TAEGO_ROOT/scripts/wheat_mammal_conserved_function.R"
+    require_runtime_and_file "$script" || return $?
+    local bg_arg="-"
+    [[ -n "$PARSED_BACKGROUND" ]] && bg_arg="$PARSED_BACKGROUND"
+    "$RSCRIPT" "$script" "$PARSED_INPUT" "$PARSED_OUTPUT" "$bg_arg" "$species"
+}
+
+# TaeGO 1.0.0 Part B is preserved under docs/legacy/ for source auditability;
+# no legacy analysis command is exposed by TaeGO 1.1.0.
+
+runtime_report() {
+    [[ -n "$RSCRIPT" && -x "$RSCRIPT" ]] || return 1
+    "$RSCRIPT" -e '
+# TAEGO_RUNTIME_REPORT
+pkgs <- c("clusterProfiler","GO.db","dplyr","org.Hs.eg.db","org.Mm.eg.db","AnnotationDbi","GenomeInfoDbData")
+cat("R\\t", as.character(getRversion()), "\\n", sep="")
+for (p in pkgs) {
+  actual <- if (requireNamespace(p, quietly=TRUE)) as.character(packageVersion(p)) else "MISSING"
+  cat(p, "\\t", actual, "\\n", sep="")
+}
+' 2>/dev/null
+}
+
+run_info() {
+    echo "TaeGO ${TAEGO_VERSION}"
+    echo "Root: ${TAEGO_ROOT}"
+    local manifest="$TAEGO_ROOT/manifest/runtime_versions.tsv"
+    if [[ ! -f "$manifest" ]]; then
+        echo "Runtime manifest: MISSING"
+        return 0
+    fi
+    declare -A actuals=()
+    if [[ -n "$RSCRIPT" && -x "$RSCRIPT" ]]; then
+        while IFS=$'\t' read -r component actual; do
+            [[ -n "$component" ]] && actuals["$component"]="$actual"
+        done < <(runtime_report || true)
+    fi
+    while IFS=$'\t' read -r component reference; do
+        [[ "$component" == "component" ]] && continue
+        [[ -z "$component" ]] && continue
+        local actual="${actuals[$component]:-MISSING}"
+        local status="MISMATCH"
+        [[ "$actual" == "$reference" ]] && status="MATCH"
+        [[ "$actual" == "MISSING" ]] && status="MISSING"
+        printf '%s reference=%s actual=%s status=%s\n' "$component" "$reference" "$actual" "$status"
+    done < "$manifest"
+}
+
+run_validate() {
+    local failed=0
+    local required=(
+        "$TAEGO_ROOT/scripts/wheat_GO_enrichment.R"
+        "$TAEGO_ROOT/scripts/wheat_mammal_conserved_function.R"
+        "$TAEGO_ROOT/data/wheat_union6_propagated_gene2go.tsv"
+        "$TAEGO_ROOT/data/wheat_mammal_human_routes.tsv"
+        "$TAEGO_ROOT/data/wheat_mammal_mouse_routes.tsv"
+        "$TAEGO_ROOT/manifest/runtime_versions.tsv"
+        "$TAEGO_ROOT/VERSION"
+        "$TAEGO_ROOT/SHA256SUMS"
+    )
+    for f in "${required[@]}"; do
+        if [[ ! -s "$f" ]]; then
+            echo "MISSING: $f" >&2
+            failed=1
+        fi
+    done
+    if [[ "$failed" -ne 0 ]]; then
+        echo "FILES=FAIL"
+        echo "VALIDATE=FAIL"
+        return 1
+    fi
+    echo "FILES=PASS"
+
+    if (cd "$TAEGO_ROOT" && sha256sum -c SHA256SUMS >/dev/null 2>&1); then
+        echo "CHECKSUMS=PASS"
+    else
+        echo "CHECKSUMS=FAIL"
+        echo "VALIDATE=FAIL"
+        return 1
+    fi
+
+    local schema_ok=1
+    awk -F '\t' 'NR==1 { if (NF != 2) exit 1; exit 0 }' \
+        "$TAEGO_ROOT/data/wheat_union6_propagated_gene2go.tsv" || schema_ok=0
+
+    local routef route_header
+    for routef in \
+        "$TAEGO_ROOT/data/wheat_mammal_human_routes.tsv" \
+        "$TAEGO_ROOT/data/wheat_mammal_mouse_routes.tsv"; do
+        route_header="$(head -n1 "$routef")"
+        if [[ "$route_header" != $'wheat_v21\ttarget_omaid\ttarget_ensembl_gene\ttarget_uniprot\tdirect_present\tdirect_rel_type\trice_support\trice_rel_type\tmaize_support\tmaize_rel_type\tarabidopsis_support\tarabidopsis_rel_type\trelay_support_n\tevidence_routes' ]]; then
+            schema_ok=0
+        fi
+    done
+
+    if [[ "$schema_ok" -eq 1 ]]; then
+        echo "DATA_SCHEMA=PASS"
+    else
+        echo "DATA_SCHEMA=FAIL"
+        echo "VALIDATE=FAIL"
+        return 1
+    fi
+
+    echo "VALIDATE=PASS"
+}
+
+run_doctor() {
+    run_validate >/dev/null || {
+        echo "DOCTOR=FAIL: installation validation failed" >&2
+        return 1
+    }
+    if [[ -z "$RSCRIPT" || ! -x "$RSCRIPT" ]]; then
+        echo "DOCTOR=FAIL: Rscript not found" >&2
+        return 1
+    fi
+
+    declare -A actuals=()
+    while IFS=$'\t' read -r component actual; do
+        [[ -n "$component" ]] && actuals["$component"]="$actual"
+    done < <(runtime_report || true)
+
+    local manifest="$TAEGO_ROOT/manifest/runtime_versions.tsv"
+    local missing=0 mismatch=0 component reference actual
+    while IFS=$'\t' read -r component reference; do
+        [[ "$component" == "component" ]] && continue
+        [[ -z "$component" ]] && continue
+        actual="${actuals[$component]:-MISSING}"
+        if [[ "$actual" == "MISSING" ]]; then
+            echo "DOCTOR missing: $component" >&2
+            missing=1
+        elif [[ "$actual" != "$reference" ]]; then
+            echo "DOCTOR warning: $component reference=$reference actual=$actual" >&2
+            mismatch=1
+        fi
+    done < "$manifest"
+    if [[ "$missing" -ne 0 ]]; then
+        echo "DOCTOR=FAIL: required runtime components are incomplete" >&2
+        return 1
+    fi
+    [[ "$mismatch" -eq 0 ]] || echo "DOCTOR_RUNTIME_REFERENCE=MISMATCH"
+    echo "DOCTOR=PASS"
+}
+
+run_citation() {
+    cat <<EOF
+TaeGO ${TAEGO_VERSION}
+Triticum aestivum Gene Ontology toolkit
+
+See METHODS.md and README.md in the TaeGO release for scientific citations.
+Run 'taego info' to record the exact R and package versions used.
+EOF
+}
+
+case "${1:-}" in
+    -v|--version) show_version ;;
+    -h|--help|"") show_help ;;
+    wheat) run_wheat "$@" ;;
+    wheat-mammal) run_wheat_mammal "$@" ;;
+    doctor) run_doctor ;;
+    info) run_info ;;
+    validate) run_validate ;;
+    citation) run_citation ;;
+    *)
+        echo "TaeGO: unknown command or option '$1'" >&2
+        echo "Run 'taego -h' for help." >&2
+        exit 2
+        ;;
+esac
