@@ -19,6 +19,38 @@ Human and mouse remain independent analyses even when `-t both` is used; TaeGO
 does not merge their GO hypothesis spaces before testing. TaeGO does **not**
 claim to support arbitrary plant or animal inputs.
 
+## Installation requirements
+
+TaeGO is distributed in two forms:
+
+1. **Standalone release installer (recommended for end users)**
+   - Includes the validated runtime environment and reference resources.
+   - Users do not need to manually install R/Bioconductor dependencies.
+
+2. **Source repository installation**
+   - Intended for developers and users who want to inspect or modify the workflow.
+   - Requires a micromamba-managed environment.
+
+### System requirements
+
+TaeGO is validated on Linux x86_64 systems.
+
+Required for source installation:
+
+- Bash shell
+- micromamba
+- Internet access during environment setup
+- Sufficient disk space for R/Bioconductor packages and reference resources
+
+Example environment setup:
+
+```bash
+micromamba create -n taego -f environment.yml
+micromamba activate taego
+```
+
+The standalone release package contains the validated runtime and does not require manual environment construction.
+
 ## Quick start
 
 Wheat GO enrichment:
