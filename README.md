@@ -24,8 +24,8 @@ claim to support arbitrary plant or animal inputs.
 TaeGO is distributed in two forms:
 
 1. **Standalone release installer (recommended for end users)**
-   - Includes the validated runtime environment and reference resources.
-   - Users do not need to manually install R/Bioconductor dependencies.
+   - Installs the TaeGO application, scripts and reference resources.
+   - Requires a prepared micromamba/conda environment containing the validated R/Bioconductor runtime.
 
 2. **Source repository installation**
    - Intended for developers and users who want to inspect or modify the workflow.
@@ -49,7 +49,7 @@ micromamba create -n taego -f environment.yml
 micromamba activate taego
 ```
 
-The standalone release package contains the validated runtime and does not require manual environment construction.
+The standalone release package installs TaeGO into an existing validated runtime environment and does not replace the runtime setup step.
 
 ## Quick start
 
