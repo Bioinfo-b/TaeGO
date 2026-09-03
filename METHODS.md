@@ -1,333 +1,131 @@
 # TaeGO 1.1.0 Methods and Evidence Contract
 
-This document distinguishes **published/officially supported methods** from
-**TGT-calibrated project settings** and from **engineering-only behavior**.
-Scientific thresholds are not introduced without a cited basis.
-
-## 1. Module A — TGT-calibrated wheat GO enrichment
-
-### 1.1 Scope
-
-The benchmarked TGT workflow was **Single Sample GO Enrichment** on
-*Triticum aestivum* rather than the optional TGT `Use orthologs` mode. TGT's
-web interface exposes ortholog use as optional. TaeGO therefore describes its
-wheat module as **TGT-calibrated**, not as an exact reproduction of the TGT
-ortholog-mode workflow or of TGT's unavailable historical annotation snapshot.
-
-TGT/GeneTribe reference:
-
-- Chen Y, Song W, Xie X, et al. 2020. *A Collinearity-Incorporating Homology
-  Inference Strategy for Connecting Emerging Assemblies in the Triticeae Tribe
-  as a Pilot Practice in the Plant Pangenomic Era.* Molecular Plant
-  13:1694–1708. DOI: **10.1016/j.molp.2020.09.019**.
-- TGT GOEnrichment web interface: https://wheat.cau.edu.cn/TGT/m28/?navbar=GOEnrichment
-- GeneTribe file-format documentation:
-  https://chenym1.github.io/genetribe/tutorial/fileformats.html
-
-GeneTribe documents `.one2one` as **RBH + SBH**; TaeGO therefore calls these
-`1-to-its-best` homolog relationships rather than strict phylogenetic
-`ortholog_one2one` assignments.
-
-### 1.2 Six-source wheat annotation
-
-TaeGO's production wheat annotation is an independent expanded resource:
-
-| Source | Role |
-|---|---|
-| IWGSC RefSeq v2.1 functional annotation | direct wheat annotation |
-| InterProScan 5.76-107.0 | domain/function-derived GO |
-| eggNOG-mapper 2.1.13 / eggNOG 5.0.2 | orthology/function-derived GO |
-| Rice IRGSP-1.0 GO | GeneTribe `1-to-its-best` homolog transfer |
-| Maize B73 RefGen v4 GO | GeneTribe `1-to-its-best` homolog transfer |
-| Arabidopsis TAIR10 GO | GeneTribe `1-to-its-best` homolog transfer |
-
-Cross-plant functional annotation transfer has a wheat-specific precedent:
-
-- Tulpan D, Leger S, Tchagang A, Pan Y. 2015. *Enrichment of Triticum aestivum
-  gene annotations using ortholog cliques and gene ontologies in other
-  plants.* BMC Genomics 16:299. DOI: **10.1186/s12864-015-1496-2**.
-
-The six annotation sources are unioned at the gene–GO level before a single
-enrichment analysis. This is an annotation expansion, not three separate
-species enrichments followed by significance-result merging.
-
-### 1.3 GO ancestor propagation
-
-The union is expanded from each positive GO annotation to its parent terms
-using GO.db (`GOBPANCESTOR`, `GOMFANCESTOR`, `GOCCANCESTOR`). This follows the
-GO transitivity/true-path semantics: positive annotations propagate upward to
-parent terms through applicable transitive relations.
-
-Official reference: Gene Ontology, “Introduction to GO annotations”:
-https://geneontology.org/docs/go-annotations/
-
-### 1.4 Statistical settings and evidence class
-
-| Setting | TaeGO 1.1.0 | Evidence/basis |
-|---|---:|---|
-| Test | hypergeometric ORA | clusterProfiler enrichment framework; Yu et al. 2012 |
-| GO aspects | BP/MF/CC separately | historical TGT Single Sample calibration |
-| Multiple testing | BH separately within each aspect | historical TGT export/calibration + BH method |
-| min gene-set size | 5 | TGT-calibrated interface/export setting |
-| max gene-set size | 1200 | TGT-calibrated interface/export setting |
-| significance | adjusted P < 0.05 | TGT-calibrated output convention |
-| default background | all genes represented in TaeGO wheat annotation | clusterProfiler `universe` semantics; use custom study universe when available |
-
-The calibration procedure recomputed TGT term P-values from foreground/background
-ratios with `phyper()` and obtained zero numerical discrepancy for the 21-term
-benchmark. This validates the **statistical calculation**, not identity of the
-expanded TaeGO annotation resource with TGT's historical annotation.
-
-General statistical references:
-
-- Yu G, Wang L-G, Han Y, He Q-Y. 2012. *clusterProfiler: an R Package for
-  Comparing Biological Themes Among Gene Clusters.* OMICS 16:284–287.
-  DOI: **10.1089/omi.2011.0118**.
-- Benjamini Y, Hochberg Y. 1995. *Controlling the False Discovery Rate: A
-  Practical and Powerful Approach to Multiple Testing.* JRSS B 57:289–300.
-  DOI: **10.1111/j.2517-6161.1995.tb02031.x**.
-- clusterProfiler manual documents `universe`, `minGSSize`, `maxGSSize` and
-  `pAdjustMethod`: https://bioconductor.org/packages/clusterProfiler/
-
-For an experiment with a known assayed/tested gene universe, that custom
-background should be supplied rather than substituting an unrelated whole
-organism universe. Background choice materially affects ORA.
-
-## 2. Module B — animal-derived conserved-function projection to wheat
-
-### 2.1 Scientific question
-
-Part B retains the original TaeGO design: use the deeper experimentally studied
-functional knowledge in human or mouse to annotate orthologous wheat genes, then
-perform enrichment in **wheat gene space**. The final statistical entities are
-therefore wheat IWGSC RefSeq v2.1 gene IDs rather than mammalian genes.
-
-This is a function-transfer/annotation-projection problem, not a target-species
-functional-analysis problem. Orthology-based functional transfer is a long-
-standing use of comparative genomics. OMA explicitly describes transfer of GO
-function from well-studied organisms to less-studied genomes and has integrated
-orthology-based GO prediction:
-
-- Altenhoff AM, Škunca N, Glover N, et al. 2015. *The OMA orthology database in
-  2015: function predictions, better plant support, synteny view and other
-  improvements.* Nucleic Acids Research 43:D240–D249.
-  DOI: **10.1093/nar/gku1158**.
-- Altenhoff AM, Vesztrocy AW, Bernard C, et al. 2024. *OMA orthology in 2024.*
-  Nucleic Acids Research 52:D513–D521. DOI: **10.1093/nar/gkad1020**.
+## 1. Overview
 
-### 2.2 Primary animal–wheat relationship: direct OMA pairwise orthology
+TaeGO is a wheat-focused Gene Ontology enrichment framework for *Triticum aestivum* gene sets.
 
-TaeGO uses direct OMA wheat↔human and wheat↔mouse pairwise orthology. OMA
-distinguishes 1:1, 1:n, m:1 and m:n pairwise orthology; lineage-specific
-duplication can therefore create genuine co-orthology. TaeGO retains all direct
-OMA relation types and records the relation cardinality rather than imposing an
-unreferenced identity, coverage or `consensus_n` cutoff.
-
-Supporting routes through rice, maize and Arabidopsis are stored separately:
-
-```text
-wheat -> rice        -> mammal
-wheat -> maize       -> mammal
-wheat -> Arabidopsis -> mammal
-```
-
-The relay routes are provenance/triangulation support only. They cannot create
-or upgrade direct wheat–mammal orthology, because pairwise orthology is not
-generally transitive in the presence of duplication.
-
-The previous builder pooled route-specific relation types. Analysis of the rebuilt data
-demonstrated that this could change the recorded direct
-`rel_type`; TaeGO 1.1.0 therefore stores `direct_rel_type`, `rice_rel_type`,
-`maize_rel_type` and `arabidopsis_rel_type` independently. The rebuild also
-fixed the previous omission of `m:1` from the rank table. Pair sets
-remain unchanged; only route provenance/cardinality representation is corrected.
-
-### 2.3 Mammalian identifier bridge
-
-OMA target identifiers are retained for provenance. OMA→Ensembl cross-references
-are used to obtain gene-level human/mouse Ensembl IDs; stable-ID version suffixes
-(e.g. `.6`) are removed while preserving the stable gene identifier. UniProt
-cross-references are retained but are not counted as separate genes.
+TaeGO provides two analysis modes:
 
-The real TaeGO 1.1.0 rebuild audit found:
-
-- human: 4,408 OMA targets → 4,408 unique Ensembl genes, no one-to-many gene
-  xrefs;
-- mouse: 4,664 OMA targets → 4,664 unique Ensembl genes, no one-to-many gene
-  xrefs.
-
-Thus the bridge changes identifier representation without deleting wheat–mammal
-relationship edges.
+1. wheat: functional enrichment using a wheat gene-to-GO annotation resource.
+2. wheat-mammal: conserved functional projection from human or mouse functional knowledge to wheat genes through direct OMA orthology.
 
-### 2.4 GO source annotations and projection evidence
+Both workflows perform final enrichment analysis in wheat gene space.
 
-Human and mouse annotations come from the frozen Bioconductor OrgDb resources
-`org.Hs.eg.db 3.20.0` and `org.Mm.eg.db 3.20.0`, using `GOALL` so ancestor
-annotations are represented consistently with the project’s propagated-GO
-framework.
+The methods described here define the scientific scope, annotation sources, statistical framework and interpretation boundaries of TaeGO 1.1.0.
 
-The publication-primary `experimental` projection uses the following evidence
-codes:
+## 2. Wheat GO enrichment framework
 
-```text
-IDA, IEP, IGI, IMP, IPI
-```
+The wheat workflow performs Gene Ontology over-representation analysis using a wheat-focused gene-to-GO annotation resource.
 
-and excludes `GO:0005515` (`protein binding`). This evidence subset mirrors the
-experimentally supported source annotations specified by Gene Ontology
-**GO_REF:0000107**, an official orthology-projection method. GO_REF:0000107 also
-uses Ensembl Compara orthology and a 40% peptide-identity requirement. TaeGO does
-**not** import that Compara-specific identity threshold and does not claim to
-reproduce GO_REF:0000107; TaeGO uses OMA pairwise orthology. The GO reference is
-used specifically as precedent for source-annotation evidence restriction.
+The analysis workflow:
 
-Reference: Gene Ontology Consortium / GOA Curators, GO_REF:0000107,
-*Automatic transfer of experimentally verified manual GO annotation data to
-orthologs using Ensembl Compara*.
-https://geneontology.org/GO_REF/0000107
+1. Input wheat gene identifiers are processed and mapped to wheat functional annotations.
+2. Gene-to-GO relationships are constructed in wheat gene space.
+3. GO enrichment is performed using hypergeometric over-representation analysis.
+4. Biological categories are reported separately for Biological Process, Molecular Function and Cellular Component.
 
-A separate `allEvidence` analysis retains all GOALL evidence present in the
-OrgDb and is reported as a reference/sensitivity view.
+## 3. Wheat functional annotation resource
 
-### 2.5 Construction of the animal-derived wheat gene→GO table
+TaeGO uses an expanded wheat annotation resource assembled from multiple traceable sources:
 
-For each species and evidence view:
+- IWGSC RefSeq v2.1 functional annotation.
+- InterProScan-derived functional annotation.
+- eggNOG-mapper functional annotation.
+- Rice, maize and Arabidopsis GO information transferred through 1-to-its-best homolog mapping.
 
-1. retain route-table rows with `direct_present = TRUE`;
-2. join the mammalian Ensembl gene to the species-specific OrgDb GO annotation;
-3. transfer each retained GO term to the corresponding wheat gene;
-4. collapse duplicate wheat–GO pairs;
-5. retain full mammalian-ID, OMA relation-type and relay-support provenance in
-   audit output.
+These sources are combined at the wheat gene-to-GO level before enrichment analysis.
 
-The resulting enrichment table has the same statistical form as Part A:
+The expanded annotation resource is designed to increase functional coverage while maintaining source provenance.
 
-```text
-wheat_gene    GO_ID
-```
+## 4. GO term propagation
 
-Thus human/mouse knowledge is used to enrich wheat annotation depth without
-changing the user's gene namespace or the statistical unit of the final GO test.
+Positive GO annotations are expanded to parent GO terms using GO database hierarchy information.
 
-### 2.6 Wheat-space enrichment parameters
+This follows the Gene Ontology true-path interpretation, where annotations can contribute to more general biological categories through applicable parent relationships.
 
-Because the projected annotation has been converted back to wheat gene space,
-TaeGO applies the validated TGT-calibrated wheat ORA framework used by Part A:
+GO hierarchy information is obtained from GO.db within the validated Bioconductor runtime.
 
-| Parameter | Value | Basis |
-|---|---:|---|
-| test | hypergeometric ORA | TGT-calibrated / clusterProfiler `enricher()` |
-| correction | Benjamini-Hochberg | TGT-calibrated, BP/MF/CC independently |
-| minGSSize | 5 | TGT wheat Single Sample interface/calibration |
-| maxGSSize | 1200 | TGT wheat Single Sample interface/calibration |
-| significance | FDR < 0.05 | TGT default / project lock |
+## 5. Statistical framework
 
-The default background is all wheat genes with at least one projected GO term
-for the selected mammalian species and evidence view. If the source experiment
-has a defined assayed/tested universe, `-b/--background` should be supplied;
-TaeGO intersects it with the projected-annotation universe.
+TaeGO performs hypergeometric over-representation analysis for GO enrichment.
 
-Human and mouse are never merged before hypothesis testing. The public Part B
-interface is `taego wheat-mammal -t human|mouse|both`; `both` runs the two
-species-specific analyses independently and reports both result sets.
+Statistical settings:
 
-### 2.7 Interpretation boundary
+- Test: hypergeometric ORA.
+- GO categories: Biological Process, Molecular Function and Cellular Component analyzed separately.
+- Multiple testing correction: Benjamini-Hochberg correction.
+- Gene-set size range: minGSSize 5 and maxGSSize 1200.
+- Significance threshold: adjusted P value < 0.05.
 
-Projected GO terms reflect functional knowledge learned in the animal ortholog.
-They should be interpreted as evidence for conserved molecular/cellular
-machinery, not as literal proof of mammal-specific physiology in wheat. GO taxon
-constraints are a formal mechanism for preventing inappropriate annotation
-(Gene Ontology Consortium; Deegan, Dimmer & Mungall 2010). TaeGO 1.1.0 uses
-formal, version-pinned GO taxon constraints rather than a custom
-taxon-constraint blacklist.
+The statistical unit of enrichment is the wheat gene-to-GO relationship table.
 
+For experiments with a defined tested gene universe, users should provide an appropriate background set.
 
-## 3. Parameters that TaeGO intentionally does not invent
+## 6. Wheat-mammal conserved functional projection
 
-TaeGO 1.1.0 does **not** introduce:
+The wheat-mammal workflow transfers conserved functional knowledge from experimentally studied mammalian species to wheat genes.
 
-- sequence identity or coverage cutoffs to manufacture “high-confidence” OMA
-  orthology;
-- a requirement for `consensus_n >= N` as a biological acceptance threshold;
-- a relay count threshold that upgrades relay-only evidence to direct orthology;
-- an animal-specific gene-set-size threshold unrelated to the validated wheat-space ORA;
-- arbitrary taxon-specific GO deletions in only one evidence mode.
+The workflow direction is:
 
-Such thresholds require a separate documented method/benchmark before they can
-become scientific filters.
+    human/mouse functional knowledge
+              ↓
+       direct OMA orthology
+              ↓
+          wheat genes
+              ↓
+     wheat-space GO enrichment
 
-## 4. Software/runtime reference
+The final enrichment analysis remains in wheat gene space. Mammalian genes are not used as the statistical testing unit.
 
-The validated-reference runtime is frozen in `environment.yml` and
-`manifest/runtime_versions.tsv`. `taego info` reports actual versus reference
-versions; `doctor` tests package availability; `validate` verifies release
-checksums and data schemas.
+Human and mouse are analyzed independently. Selecting both species does not merge their GO annotation spaces before statistical testing.
 
-## 5. Claims that are supported and claims that are not
+## 7. OMA orthology mapping
 
-Supported:
+TaeGO uses direct OMA pairwise orthology as the primary animal-wheat relationship source.
 
-- TaeGO `wheat` has broader wheat annotation coverage than the historical TGT
-  benchmark used in this project.
-- TaeGO combines six traceable annotation sources before one enrichment test.
-- TaeGO `wheat-mammal -t human|mouse|both` uses direct OMA relationships to project animal GO annotations back to wheat before wheat-space ORA.
+OMA relationship types including 1:1, 1:n, m:1 and m:n are retained as relationship information rather than filtered by an artificial sequence identity or coverage threshold.
 
-Not established solely by the current release:
+Supporting plant routes are retained as provenance information only. Relay relationships do not create direct wheat-mammal orthology.
 
-- that the expanded annotation is biologically more accurate than TGT;
-- that every relay-only endpoint is a direct wheat–mammal ortholog;
-- that mammal-specific GO labels literally describe wheat physiology;
-- that TaeGO is an exact reconstruction of TGT's historical annotation data.
+The mapping output preserves orthology provenance and identifier relationships used during functional projection.
 
-## Final TaeGO 1.1.0 GO taxon-constraint quality control
+## 8. GO evidence handling
 
-TaeGO does not apply an ad-hoc biological blacklist when using formal,
-version-matched GO taxon-constraint resources. Taxon compatibility is determined
-from formal GO constraints rather than keyword-based or manually curated
-GO-term exclusion rules.
+Human and mouse GO annotations are obtained from validated Bioconductor OrgDb resources.
 
-In the final TaeGO 1.1.0 Part B workflow, animal-derived GO annotations are
-first projected to wheat genes through direct OMA pairwise orthology. Before
-wheat-space over-representation analysis, the resulting projected GO
-annotations are subjected to formal Gene Ontology taxon-constraint quality
-control.
+The primary conserved-function projection uses experimentally supported evidence categories:
 
-The target is *Triticum aestivum* (`NCBITaxon:4565`) and the compatibility
-contract is pinned to GO release `2024-09-08`. The final runtime bundles:
+    IDA, IEP, IGI, IMP, IPI
 
-`data/wheat_go_taxon_compatibility_2024-09-08.tsv`
+A separate allEvidence output can retain broader annotation evidence as a reference view.
 
-with SHA256:
+The evidence selection is designed to prioritize experimentally supported functional knowledge during projection.
 
-`61cdf7c9ec918e8c35f32315a6863454f4f61d8d4384aefecc572c7710adf95e`
+## 9. Interpretation boundary
 
-The frozen compatibility derivation is provenance-linked to:
+Animal-derived GO projection represents conserved functional annotation support for wheat genes.
 
-- GO computed taxon constraints:
-  `9b1ee1894fb6abc1e784326ea7c6dece211263b7173e31d0544d78d15c935856`
-- GO taxon groupings:
-  `648cb63eccfb0ffc89073f0c5659adbba1640f37cc39ea9a6255a36e5be4611f`
-- NCBI taxonomy information used for the wheat lineage:
-  `e22f0f7b21aabcf71f5967848115eb18be1d8c0dce21de45cb2ef2d43d031571`
+These annotations should not be interpreted as direct evidence that wheat possesses species-specific mammalian phenotypes.
 
-Formal `in_taxon`/`only_in_taxon` and `never_in_taxon` constraints are used
-to determine wheat compatibility. `BLOCK_IN_TAXON` and
-`BLOCK_NEVER_IN_TAXON` wheat-GO pairs are excluded from the statistical
-annotation universe. `ALLOW` and `ALLOW_NO_CONSTRAINT` pairs are retained.
-GO identifiers absent from the frozen compatibility resource, or unsupported
-status values, fail closed.
+The strongest interpretations concern conserved molecular and cellular functions shared across species.
 
-The raw direct-orthology-derived projection is retained separately for
-provenance and is not destroyed by filtering. For each species/evidence mode,
-TaeGO records the raw foreground projection, the filtered statistical
-projection, and the taxon-filter audit before performing wheat-space ORA.
+TaeGO does not introduce arbitrary biological filtering rules without documented methodological support.
 
-This implementation follows the formal GO taxon-constraint framework of
-Deegan JI, Dimmer EC, and Mungall CJ (2010), *BMC Bioinformatics* 11:530,
-DOI `10.1186/1471-2105-11-530`, PMID `20973947`.
+## 10. Runtime and software references
 
-The taxon-QC step does not introduce an OMA sequence-identity threshold,
-coverage threshold, consensus-vote threshold, or any manually constructed
-biological blacklist. The existing TGT-calibrated wheat-space ORA parameters
-and the separate BP/MF/CC Benjamini-Hochberg correction remain unchanged.
+TaeGO 1.1.0 uses a frozen R/Bioconductor runtime defined in environment.yml.
 
+Core software components include:
+
+- clusterProfiler for enrichment analysis.
+- GO.db for Gene Ontology hierarchy information.
+- AnnotationDbi and organism annotation packages for functional annotation access.
+
+## 11. References
+
+- Yu G, Wang L-G, Han Y, He Q-Y. 2012. clusterProfiler: an R Package for Comparing Biological Themes Among Gene Clusters. OMICS 16:284-287.
+- Gene Ontology Consortium. Gene Ontology annotation and data resources.
+- Altenhoff AM et al. 2015. The OMA orthology database in 2015: function predictions, better plant support, synteny view and other improvements. Nucleic Acids Research 43:D240-D249.
+- Altenhoff AM et al. 2024. OMA orthology in 2024. Nucleic Acids Research 52:D513-D521.
+
+The above references describe software, databases and comparative genomics resources used by TaeGO. TaeGO defines its own analysis workflow and functional projection framework.
