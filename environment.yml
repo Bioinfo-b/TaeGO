@@ -1,3 +1,7 @@
+# TaeGO 1.1.0 validated Linux x86_64 runtime.
+# Create a named environment with:
+#   micromamba create -n taego-1.1.0 -f environment.yml -y
+# These are the direct runtime pins; the solver resolves their dependencies.
 channels:
   - conda-forge
   - bioconda

@@ -1,0 +1,53 @@
+name: Repository checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check shell and configuration files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          bash -n bin/taego
+          ruby -e 'require "yaml"; YAML.load_file("environment.yml")'
+
+          version="$(tr -d "[:space:]" < VERSION)"
+          test "$version" = "1.1.0"
+          grep -Fq "v${version}" README.md
+          grep -Fq "taego wheat -i" README.md
+          grep -Fq "taego wheat-mammal" README.md
+          grep -Fq "environment.yml" README.md
+          grep -Fq "TaeGO-${version}-Linux-x86_64.sh" INSTALL.md
+
+          awk '
+            NF != 2 || length($1) != 64 || $1 !~ /^[0-9a-f]+$/ || $2 != "TaeGO-1.1.0-Linux-x86_64.sh" { exit 1 }
+          ' TaeGO-1.1.0-Linux-x86_64.sh.sha256
+
+          test -f README.md
+          test -f INSTALL.md
+          test -f METHODS.md
+          test -f CHANGELOG.md
+          test -f docs/USAGE.md
+          test -f docs/MAPPING_SCHEMA.md
+          test -f environment.yml
+
+      - name: Reject stale public commands and private paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE 'taego[[:space:]]+(plant|animal)|wheat-human|wheat-mouse|TGT-calibrated|/home/data_store|/opt/software/taego|node01|_handoff' \
+              README.md INSTALL.md METHODS.md CHANGELOG.md docs environment.yml; then
+            echo "Found a stale command, private path, or internal term in public files" >&2
+            exit 1
+          fi

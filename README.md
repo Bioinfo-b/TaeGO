@@ -1,130 +1,174 @@
-# TaeGO
+# 🌾 TaeGO
 
 **TaeGO — Triticum aestivum Gene Ontology toolkit**
 
-Version **1.1.0**
+Release **v1.1.0** · Linux x86_64
 
-TaeGO is a Linux command-line bioinformatics toolkit for functional analysis of *Triticum aestivum* gene sets.
+[![Latest release](https://img.shields.io/github/v/release/Bioinfo-b/TaeGO?display_name=tag&sort=semver)](https://github.com/Bioinfo-b/TaeGO/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Linux%20x86__64-informational)](https://github.com/Bioinfo-b/TaeGO)
+[![Repository checks](https://github.com/Bioinfo-b/TaeGO/actions/workflows/repository-checks.yml/badge.svg)](https://github.com/Bioinfo-b/TaeGO/actions/workflows/repository-checks.yml)
 
-TaeGO provides two main analysis workflows:
+TaeGO is a Linux command-line toolkit for Gene Ontology (GO) analysis of
+*Triticum aestivum* gene sets. It keeps the final enrichment statistics in
+wheat gene space and provides two workflows:
 
-1. **wheat** — wheat-focused GO enrichment analysis using an expanded wheat functional annotation resource.
-2. **wheat-mammal** — conserved functional projection from human or mouse functional knowledge to wheat genes through direct OMA orthology, followed by wheat-space GO enrichment.
+- **`taego wheat`** — wheat-focused GO enrichment using an expanded,
+  provenance-traceable wheat annotation resource.
+- **`taego wheat-mammal`** — projects experimentally supported human or mouse
+  functional knowledge to wheat through direct OMA orthology, then performs
+  enrichment in wheat gene space.
 
-TaeGO is designed for wheat gene analysis. The input gene namespace and enrichment statistics remain in wheat gene space.
+Human and mouse are analyzed independently when `--target both` is selected.
 
-Human and mouse analyses are performed independently when multiple target species are selected.
+## 🚀 Install on a fresh Linux server
 
-## Download
+The commands below are the standard user-local installation path. They assume
+an Ubuntu-like Linux x86_64 server and do not require root access.
 
-The latest TaeGO release is available from GitHub Releases:
+### 1. Check the platform
 
-    https://github.com/Bioinfo-b/TaeGO/releases
+```bash
+uname -m
+# Expected: x86_64
+```
 
-Current release:
+### 2. Install micromamba
 
-    TaeGO v1.1.0
-    Platform: Linux x86_64
-    Installer: TaeGO-1.1.0-Linux-x86_64.sh
+```bash
+mkdir -p "$HOME/.local/bin"
+curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest \
+  | tar -xvj -C "$HOME/.local/bin" --strip-components=1 bin/micromamba
+export PATH="$HOME/.local/bin:$PATH"
+eval "$(micromamba shell hook --shell bash)"
+micromamba shell init --shell bash --root-prefix "$HOME/micromamba"
+source "$HOME/.bashrc"
+```
 
-SHA256 checksum verification is provided with the release assets.
+### 3. Create the validated TaeGO environment
 
-## Installation
+```bash
+git clone https://github.com/Bioinfo-b/TaeGO.git
+cd TaeGO
+micromamba create -n taego-1.1.0 -f environment.yml -y
+micromamba activate taego-1.1.0
+```
 
-For complete installation instructions, see:
+### 4. Download, verify, and install TaeGO
 
-    INSTALL.md
+```bash
+mkdir -p "$HOME/taego-downloads/1.1.0"
+cd "$HOME/taego-downloads/1.1.0"
 
-The installation workflow includes:
+curl -LO https://github.com/Bioinfo-b/TaeGO/releases/download/v1.1.0/TaeGO-1.1.0-Linux-x86_64.sh
+curl -LO https://github.com/Bioinfo-b/TaeGO/releases/download/v1.1.0/TaeGO-1.1.0-Linux-x86_64.sh.sha256
 
-1. Preparing the micromamba or conda runtime.
-2. Creating the validated R/Bioconductor environment.
-3. Installing the TaeGO release package.
-4. Running doctor and validate checks.
+sha256sum -c TaeGO-1.1.0-Linux-x86_64.sh.sha256
+bash TaeGO-1.1.0-Linux-x86_64.sh --prefix "$CONDA_PREFIX"
+hash -r
+```
 
-## Quick start
+### 5. Verify the installation
+
+```bash
+taego -v
+taego doctor
+taego validate
+```
+
+All three checks should complete successfully before analysis. If you need a
+system-wide installation for multiple users, follow the administrator section
+in [INSTALL.md](INSTALL.md).
+
+## ⚡ Quick start
 
 ### Wheat GO enrichment
 
-Example:
+Prepare a plain-text file containing one canonical wheat gene ID per line
+(without a header), for example `genes.txt`, then run:
 
-    taego wheat -i genes.txt -o result
+```bash
+mkdir -p results
+taego wheat -i genes.txt -o results/wheat_demo
+```
 
-### Wheat-mammal conserved functional projection
+Optional custom background:
 
-Human and mouse functional knowledge can be projected to wheat genes through direct OMA orthology.
+```bash
+taego wheat -i genes.txt -b background.txt -o results/wheat_with_background
+```
 
-Examples:
+### Wheat–mammal conserved-function projection
 
-    taego wheat-mammal -i genes.txt -o result -t human
-    taego wheat-mammal -i genes.txt -o result -t mouse
-    taego wheat-mammal -i genes.txt -o result -t both
+Run human and mouse independently:
 
-The -t option selects the mammalian source species.
+```bash
+taego wheat-mammal -i genes.txt -o results/mammal_human -t human
+taego wheat-mammal -i genes.txt -o results/mammal_mouse -t mouse
+```
 
-When both species are selected, human and mouse analyses remain independent.
+Or run both analyses as separate outputs:
 
-## Analysis overview
+```bash
+taego wheat-mammal -i genes.txt -o results/mammal_demo -t both
+```
 
-### wheat workflow
+See [docs/USAGE.md](docs/USAGE.md) for input rules, output files, and common
+examples.
 
-The wheat workflow performs GO enrichment analysis using a wheat-focused functional annotation resource.
+## 📥 Input and 📤 output
 
-The workflow:
+Input files are one gene identifier per line. Empty lines and duplicate IDs are
+handled by the analysis scripts; keep identifiers in the canonical IWGSC
+RefSeq v2.1 wheat namespace. A background file, when supplied, must use the
+same wheat identifier namespace.
 
-1. Accepts wheat gene IDs as input.
-2. Builds a wheat gene-to-GO annotation table.
-3. Performs GO over-representation analysis.
-4. Reports biological categories enriched in the input gene set.
+Wheat runs commonly produce:
 
-### wheat-mammal workflow
+```text
+<prefix>_all.csv
+<prefix>_sig.csv
+<prefix>_input_summary.tsv
+<prefix>_unmapped_genes.txt
+```
 
-The wheat-mammal workflow uses experimentally supported human or mouse functional knowledge as an additional conserved-function annotation source.
+Mammal projection runs additionally produce projected annotation tables,
+mapping audit files, and run summaries. The final statistical unit for both
+workflows is the wheat gene.
 
-Workflow direction:
+## 🔧 Useful commands
 
-    human/mouse functional knowledge
-              ↓
-       direct OMA orthology
-              ↓
-          wheat genes
-              ↓
-     wheat-space GO enrichment
+```bash
+taego -h
+taego wheat -h
+taego wheat-mammal -h
+taego info
+taego citation
+```
 
-The final enrichment statistics are performed in wheat gene space.
+## 📚 Documentation
 
-Animal-derived GO terms should be interpreted as conserved molecular or cellular functions, not as direct evidence of species-specific phenotypes.
+- [INSTALL.md](INSTALL.md) — complete installation, administrator deployment,
+  upgrade, and troubleshooting guide.
+- [docs/USAGE.md](docs/USAGE.md) — input format, commands, outputs, and
+  interpretation guide.
+- [METHODS.md](METHODS.md) — scientific methods, annotation sources, and
+  references.
+- [docs/MAPPING_SCHEMA.md](docs/MAPPING_SCHEMA.md) — wheat–mammal mapping
+  fields and provenance semantics.
+- [CHANGELOG.md](CHANGELOG.md) — release history.
 
-## Main outputs
+## 🧬 Scientific scope
 
-Wheat analysis outputs:
+The wheat workflow uses a six-source wheat gene-to-GO resource with GO
+ancestor propagation and hypergeometric over-representation analysis. The
+wheat–mammal workflow uses direct OMA relationships and experimentally
+supported mammalian GO annotations as a conserved-function projection.
 
-    <prefix>_all.csv
-    <prefix>_sig.csv
-    <prefix>_input_summary.tsv
-    <prefix>_unmapped_genes.txt
+Animal-derived terms indicate conserved functional annotation support; they are
+not evidence of a wheat-specific mammalian phenotype.
 
-Wheat-mammal analysis outputs include:
+## Support
 
-    enrichment result tables
-    projected gene-to-GO annotation tables
-    mapping audit files
-    run summary files
-
-## Validation commands
-
-Useful TaeGO commands:
-
-    taego -h
-    taego -v
-    taego doctor
-    taego info
-    taego validate
-
-## Documentation
-
-See the following files for more information:
-
-    INSTALL.md   Installation instructions
-    METHODS.md   Scientific methods and references
-    docs/       Additional technical documentation
+For a reproducible bug report, include the output of `taego -v`, `taego info`,
+the exact command, and the relevant error message. Please open an issue at
+<https://github.com/Bioinfo-b/TaeGO/issues>.

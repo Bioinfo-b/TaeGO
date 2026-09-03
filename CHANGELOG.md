@@ -25,6 +25,7 @@
 - Updated installation documentation for end-user installation workflow.
 - Updated scientific documentation describing TaeGO methods, references and interpretation boundaries.
 - Updated runtime specification with the validated R/Bioconductor environment.
+- Added a fresh-server installation path, usage guide, and repository checks.
 
 ## Previous versions
 

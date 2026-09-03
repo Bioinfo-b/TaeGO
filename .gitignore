@@ -1,0 +1,25 @@
+# Analysis results and local output
+results/
+output/
+tmp/
+temp/
+*.out
+
+# Downloaded release/runtime material
+downloads/
+runtime/
+installer/
+*.tar.gz
+*.sh.tmp
+
+# Local Conda/micromamba and R state
+.conda/
+.micromamba/
+.Rhistory
+.RData
+.Rproj.user/
+
+# Editor and operating-system files
+.DS_Store
+*.swp
+*.swo

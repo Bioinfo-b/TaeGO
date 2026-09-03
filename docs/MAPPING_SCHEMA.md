@@ -1,5 +1,9 @@
 # Wheat–mammal mapping schema
 
+This page documents the mapping fields used by the `wheat-mammal` workflow.
+For installation and command examples, see [../INSTALL.md](../INSTALL.md) and
+[USAGE.md](USAGE.md).
+
 ## Why TaeGO 1.1.0 separates routes
 
 TaeGO 1.0.0 pooled evidence from four routes into one final relation record:

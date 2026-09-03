@@ -13,6 +13,10 @@ Both workflows perform final enrichment analysis in wheat gene space.
 
 The methods described here define the scientific scope, annotation sources, statistical framework and interpretation boundaries of TaeGO 1.1.0.
 
+For installation and command examples, see [INSTALL.md](INSTALL.md) and
+[docs/USAGE.md](docs/USAGE.md). This document records the analysis contract;
+it is not a substitute for the user-facing installation guide.
+
 ## 2. Wheat GO enrichment framework
 
 The wheat workflow performs Gene Ontology over-representation analysis using a wheat-focused gene-to-GO annotation resource.
@@ -115,6 +119,10 @@ TaeGO does not introduce arbitrary biological filtering rules without documented
 
 TaeGO 1.1.0 uses a frozen R/Bioconductor runtime defined in environment.yml.
 
+The environment file pins the principal runtime packages used for validation;
+it is not a complete lockfile for every transitive package. Record
+`taego info` with each analysis.
+
 Core software components include:
 
 - clusterProfiler for enrichment analysis.
@@ -123,9 +131,9 @@ Core software components include:
 
 ## 11. References
 
-- Yu G, Wang L-G, Han Y, He Q-Y. 2012. clusterProfiler: an R Package for Comparing Biological Themes Among Gene Clusters. OMICS 16:284-287.
-- Gene Ontology Consortium. Gene Ontology annotation and data resources.
-- Altenhoff AM et al. 2015. The OMA orthology database in 2015: function predictions, better plant support, synteny view and other improvements. Nucleic Acids Research 43:D240-D249.
-- Altenhoff AM et al. 2024. OMA orthology in 2024. Nucleic Acids Research 52:D513-D521.
+- Yu G, Wang L-G, Han Y, He Q-Y. 2012. [clusterProfiler: an R Package for Comparing Biological Themes Among Gene Clusters](https://doi.org/10.1089/omi.2011.0118). *OMICS* 16:284-287.
+- [Gene Ontology Consortium. Gene Ontology annotation and data resources](https://geneontology.org/docs/go-annotations/).
+- Altenhoff AM et al. 2015. [The OMA orthology database in 2015: function predictions, better plant support, synteny view and other improvements](https://doi.org/10.1093/nar/gku1158). *Nucleic Acids Research* 43:D240-D249.
+- Altenhoff AM et al. 2024. [OMA orthology in 2024](https://doi.org/10.1093/nar/gkad1020). *Nucleic Acids Research* 52:D513-D521.
 
 The above references describe software, databases and comparative genomics resources used by TaeGO. TaeGO defines its own analysis workflow and functional projection framework.
