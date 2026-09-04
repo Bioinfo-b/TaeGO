@@ -49,8 +49,9 @@ source "$HOME/.bashrc"
 ```bash
 git clone https://github.com/Bioinfo-b/TaeGO.git
 cd TaeGO
-micromamba create -n taego-1.1.0 -f environment.yml -y
-micromamba activate taego-1.1.0
+micromamba create -n taego -f environment.yml -y
+micromamba activate taego
+bash scripts/install_bioc_data.sh
 ```
 
 ### 4. Download, verify, and install TaeGO

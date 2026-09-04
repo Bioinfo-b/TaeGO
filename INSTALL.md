@@ -63,12 +63,15 @@ Create and activate a dedicated environment. Do not install TaeGO's packages
 into an unrelated analysis environment:
 
 ```bash
-micromamba create -n taego-1.1.0 -f environment.yml -y
-micromamba activate taego-1.1.0
+micromamba create -n taego -f environment.yml -y
+micromamba activate taego
+bash scripts/install_bioc_data.sh
 ```
 
-The frozen runtime pins R 4.4.1 and the required Bioconductor packages. Confirm
-that R is available:
+The frozen runtime pins R 4.4.1 and the required Bioconductor packages. The
+repository script above verifies the four Bioconductor data packages and
+repairs an interrupted Conda post-link download using the package metadata,
+mirror fallback, and MD5 checks. Confirm that R is available:
 
 ```bash
 R --version
@@ -110,7 +113,7 @@ download, download both files again, and repeat the check.
 Keep the environment active and pass its prefix explicitly:
 
 ```bash
-micromamba activate taego-1.1.0
+micromamba activate taego
 bash TaeGO-1.1.0-Linux-x86_64.sh --prefix "$CONDA_PREFIX"
 hash -r
 ```
@@ -140,15 +143,25 @@ The commands below assume the administrator's `micromamba` executable is on
 the `sudo` PATH. If micromamba is installed only for your own account, use its
 absolute path or install/initialize it for the administrator account first.
 
-The exact prefix is an administrator policy; the example below uses
-`/opt/taego/1.1.0`. Replace it consistently if your site uses another path.
+The exact prefix is an administrator policy. Set `TAEGO_PREFIX` to the shared
+path selected by your site and reuse it consistently below.
 
 1. As an administrator, create a dedicated Conda/micromamba environment at the
    shared prefix using the repository's `environment.yml`:
 
    ```bash
-   sudo mkdir -p /opt/taego/1.1.0
-   sudo micromamba create -p /opt/taego/1.1.0 -f /path/to/TaeGO/environment.yml -y
+   TAEGO_PREFIX="<PREFIX>"
+   sudo mkdir -p "$TAEGO_PREFIX"
+   sudo micromamba create -p "$TAEGO_PREFIX" -f /path/to/TaeGO/environment.yml -y
+   ```
+
+Activate that prefix and repair/verify the Bioconductor data packages before
+installing TaeGO:
+
+   ```bash
+   eval "$(micromamba shell hook --shell bash)"
+   micromamba activate "$TAEGO_PREFIX"
+   bash /path/to/TaeGO/scripts/install_bioc_data.sh
    ```
 
 2. Verify the checksum as an ordinary file check, then install into that same
@@ -156,14 +169,15 @@ The exact prefix is an administrator policy; the example below uses
 
    ```bash
    sha256sum -c TaeGO-1.1.0-Linux-x86_64.sh.sha256
-   sudo bash TaeGO-1.1.0-Linux-x86_64.sh --prefix /opt/taego/1.1.0
+   sudo bash TaeGO-1.1.0-Linux-x86_64.sh --prefix "$TAEGO_PREFIX"
    ```
 
 3. Make the launcher available to users through a symlink:
 
    ```bash
-   sudo ln -sfn /opt/taego/1.1.0/bin/taego /usr/local/bin/taego
-   sudo chmod 755 /opt/taego/1.1.0
+   sudo ln -sfn "$TAEGO_PREFIX/bin/taego" /usr/local/bin/taego
+   sudo chmod a+rx "$TAEGO_PREFIX"
+   sudo chmod -R a+rX "$TAEGO_PREFIX/share/taego/1.1.0"
    ```
 
 4. As each user, confirm that the shared runtime is readable and run:
@@ -230,7 +244,7 @@ Activate the environment used for installation and refresh the shell command
 cache:
 
 ```bash
-micromamba activate taego-1.1.0
+micromamba activate taego
 hash -r
 command -v taego
 ```
@@ -244,12 +258,13 @@ namei -l /usr/local/bin/taego
 ### `taego doctor` reports a missing package
 
 The runtime was incomplete or a different environment is active. Check the
-active prefix and recreate the dedicated environment from `environment.yml`:
+active prefix, rerun the Bioconductor repair script, and then run `doctor`:
 
 ```bash
 echo "$CONDA_PREFIX"
 micromamba env list
-micromamba activate taego-1.1.0
+micromamba activate taego
+bash /path/to/TaeGO/scripts/install_bioc_data.sh
 taego doctor
 ```
 

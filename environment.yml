@@ -1,6 +1,9 @@
 # TaeGO 1.1.0 validated Linux x86_64 runtime.
 # Create a named environment with:
-#   micromamba create -n taego-1.1.0 -f environment.yml -y
+#   micromamba create -n taego -f environment.yml -y
+# After creation, run scripts/install_bioc_data.sh while the environment is
+# active. It verifies and repairs the four Bioconductor data packages whose
+# Conda post-link downloads can be interrupted without a reliable error.
 # These are the direct runtime pins; the solver resolves their dependencies.
 channels:
   - conda-forge
@@ -11,6 +14,7 @@ dependencies:
   - bioconductor-clusterprofiler=4.14.0
   - bioconductor-go.db=3.20.0
   - r-dplyr=1.2.1
+  - r-jsonlite
   - bioconductor-org.hs.eg.db=3.20.0
   - bioconductor-org.mm.eg.db=3.20.0
   - bioconductor-annotationdbi=1.68.0
