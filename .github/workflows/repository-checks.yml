@@ -20,6 +20,7 @@ jobs:
           set -euo pipefail
 
           bash -n bin/taego
+          bash -n scripts/install_bioc_data.sh
           ruby -e 'require "yaml"; YAML.load_file("environment.yml")'
 
           version="$(tr -d "[:space:]" < VERSION)"
@@ -41,6 +42,7 @@ jobs:
           test -f docs/USAGE.md
           test -f docs/MAPPING_SCHEMA.md
           test -f environment.yml
+          test -f scripts/install_bioc_data.sh
 
       - name: Reject stale public commands and private paths
         shell: bash
