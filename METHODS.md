@@ -1,4 +1,4 @@
-# TaeGO 1.1.0 Methods and Evidence Contract
+# TaeGO 2.0.0 Methods and Evidence Contract
 
 ## 1. Overview
 
@@ -11,7 +11,7 @@ TaeGO provides two analysis modes:
 
 Both workflows perform final enrichment analysis in wheat gene space.
 
-The methods described here define the scientific scope, annotation sources, statistical framework and interpretation boundaries of TaeGO 1.1.0.
+The methods described here define the scientific scope, annotation sources, statistical framework and interpretation boundaries of TaeGO 2.0.0.
 
 For installation and command examples, see [INSTALL.md](INSTALL.md) and
 [docs/USAGE.md](docs/USAGE.md). This document records the analysis contract;
@@ -117,7 +117,7 @@ TaeGO does not introduce arbitrary biological filtering rules without documented
 
 ## 10. Runtime and software references
 
-TaeGO 1.1.0 uses a frozen R/Bioconductor runtime defined in environment.yml.
+TaeGO 2.0.0 uses a frozen R/Bioconductor runtime defined in environment.yml.
 
 The environment file pins the principal runtime packages used for validation;
 it is not a complete lockfile for every transitive package. Record

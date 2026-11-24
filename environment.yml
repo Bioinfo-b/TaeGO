@@ -1,4 +1,4 @@
-# TaeGO 1.1.0 validated Linux x86_64 runtime.
+# TaeGO 2.0.0 validated Linux x86_64 runtime.
 # Create a named environment with:
 #   micromamba create -n taego -f environment.yml -y
 # After creation, run scripts/install_bioc_data.sh while the environment is

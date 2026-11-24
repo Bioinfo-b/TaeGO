@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TAEGO_VERSION="1.1.0"
+TAEGO_VERSION="2.0.0"
 
 SOURCE="${BASH_SOURCE[0]}"
 while [[ -L "$SOURCE" ]]; do
@@ -291,7 +291,7 @@ run_wheat_mammal() {
 }
 
 # Historical CLI helper retained for source auditability only.
-# It is intentionally not dispatched by TaeGO 1.1.0.
+# It is intentionally not dispatched by TaeGO 2.0.0.
 run_wheat_mammal_species() {
     local species="$1"
     shift
@@ -321,7 +321,7 @@ run_wheat_mammal_species() {
 }
 
 # TaeGO 1.0.0 Part B is preserved under docs/legacy/ for source auditability;
-# no legacy analysis command is exposed by TaeGO 1.1.0.
+# no legacy analysis command is exposed by TaeGO 2.0.0.
 
 runtime_report() {
     [[ -n "$RSCRIPT" && -x "$RSCRIPT" ]] || return 1

@@ -1,5 +1,39 @@
 # Changelog
 
+## 2.0.0
+
+### Scientific workflow
+
+- Added an official GO taxon-constraint filter to the wheat workflow.
+- Removed only gene–GO pairs whose GO terms are explicitly blocked in the
+  NCBI animal taxon lineage by a positive `RO:0002162` (`in_taxon`)
+  constraint.
+- Preserved plant-compatible, broadly conserved, and unconstrained GO
+  annotations.
+- Added an audit table for removed gene–GO pairs and a filtering summary for
+  every wheat run.
+
+### Validation
+
+- Tested against the 5,722-gene wheat regression set that previously exposed
+  animal-specific GO terms.
+- No animal-exclusive GO terms remained in the final wheat enrichment tables.
+- The filtering resource is frozen from the official GO taxon-compatibility
+  snapshot dated 2024-09-08.
+
+### Mammalian workflow
+
+- Preserved the human/mouse conserved-function projection logic.
+- Preserved direct OMA mapping, relay provenance, independent human and mouse
+  analyses, and wheat-space enrichment.
+
+### Runtime and packaging
+
+- Updated the release version to 2.0.0.
+- Retained the validated R 4.4.1 and Bioconductor 3.20 runtime specification.
+- Added the wheat taxon-compatibility and animal-exclusive GO resources to the
+  release data package.
+
 ## 1.1.0
 
 ### Scientific workflow

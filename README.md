@@ -2,7 +2,7 @@
 
 **TaeGO — Triticum aestivum Gene Ontology toolkit**
 
-Release **v1.1.0** · Linux x86_64
+Release **v2.0.0** · Linux x86_64
 
 [![Latest release](https://img.shields.io/github/v/release/Bioinfo-b/TaeGO?display_name=tag&sort=semver)](https://github.com/Bioinfo-b/TaeGO/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Linux%20x86__64-informational)](https://github.com/Bioinfo-b/TaeGO)
@@ -57,14 +57,14 @@ bash scripts/install_bioc_data.sh
 ### 4. Download, verify, and install TaeGO
 
 ```bash
-mkdir -p "$HOME/taego-downloads/1.1.0"
-cd "$HOME/taego-downloads/1.1.0"
+mkdir -p "$HOME/taego-downloads/2.0.0"
+cd "$HOME/taego-downloads/2.0.0"
 
-curl -LO https://github.com/Bioinfo-b/TaeGO/releases/download/v1.1.0/TaeGO-1.1.0-Linux-x86_64.sh
-curl -LO https://github.com/Bioinfo-b/TaeGO/releases/download/v1.1.0/TaeGO-1.1.0-Linux-x86_64.sh.sha256
+curl -LO https://github.com/Bioinfo-b/TaeGO/releases/download/v2.0.0/TaeGO-2.0.0-Linux-x86_64.sh
+curl -LO https://github.com/Bioinfo-b/TaeGO/releases/download/v2.0.0/TaeGO-2.0.0-Linux-x86_64.sh.sha256
 
-sha256sum -c TaeGO-1.1.0-Linux-x86_64.sh.sha256
-bash TaeGO-1.1.0-Linux-x86_64.sh --prefix "$CONDA_PREFIX"
+sha256sum -c TaeGO-2.0.0-Linux-x86_64.sh.sha256
+bash TaeGO-2.0.0-Linux-x86_64.sh --prefix "$CONDA_PREFIX"
 hash -r
 ```
 
