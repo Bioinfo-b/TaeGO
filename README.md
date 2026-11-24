@@ -4,7 +4,7 @@
 
 Release **v2.0.0** · Linux x86_64
 
-[![Latest release](https://img.shields.io/github/v/release/Bioinfo-b/TaeGO?display_name=tag&sort=semver)](https://github.com/Bioinfo-b/TaeGO/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/Bioinfo-b/TaeGO?label=Latest%20release&sort=semver)](https://github.com/Bioinfo-b/TaeGO/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Linux%20x86__64-informational)](https://github.com/Bioinfo-b/TaeGO)
 [![Repository checks](https://github.com/Bioinfo-b/TaeGO/actions/workflows/repository-checks.yml/badge.svg)](https://github.com/Bioinfo-b/TaeGO/actions/workflows/repository-checks.yml)
 
