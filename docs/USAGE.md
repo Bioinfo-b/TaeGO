@@ -1,6 +1,6 @@
 # TaeGO usage guide
 
-This guide assumes TaeGO 1.1.0 is installed and the runtime environment is
+This guide assumes TaeGO 2.0.0 is installed and the runtime environment is
 active. If you have not installed TaeGO yet, follow [INSTALL.md](../INSTALL.md)
 first.
 

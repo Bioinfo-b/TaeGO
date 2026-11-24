@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # ============================================================
-# TaeGO 1.1.0 Part B: animal-derived conserved-function GO projection to wheat
+# TaeGO 2.0.0 Part B: animal-derived conserved-function GO projection to wheat
 #
 # Scientific question (restored from the original Part B design):
 #   use detailed human/mouse GO knowledge to annotate orthologous wheat genes,
@@ -47,7 +47,7 @@ suppressMessages({
   library(AnnotationDbi)
 })
 
-TAEGO_VERSION <- "1.1.0"
+TAEGO_VERSION <- "2.0.0"
 MIN_GS <- 5
 MAX_GS <- 1200
 FDR_CUTOFF <- 0.05

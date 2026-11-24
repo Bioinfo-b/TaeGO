@@ -12,7 +12,7 @@ body:
     attributes:
       label: TaeGO version
       description: Run `taego -v` and paste the result.
-      placeholder: "TaeGO 1.1.0"
+      placeholder: "TaeGO 2.0.0"
     validations:
       required: true
   - type: textarea

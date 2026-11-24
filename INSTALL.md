@@ -1,13 +1,13 @@
-# TaeGO 1.1.0 installation guide
+# TaeGO 2.0.0 installation guide
 
-This guide is the authoritative installation procedure for TaeGO 1.1.0 on a
+This guide is the authoritative installation procedure for TaeGO 2.0.0 on a
 Linux x86_64 server. TaeGO is distributed as a release installer, while its R
 and Bioconductor runtime is created separately from the frozen
 `environment.yml` file.
 
 ## Before you start
 
-TaeGO 1.1.0 supports Linux x86_64 and Bash. Ubuntu 22.04 or a compatible
+TaeGO 2.0.0 supports Linux x86_64 and Bash. Ubuntu 22.04 or a compatible
 distribution is the validated baseline. The server needs:
 
 - Internet access for micromamba, Conda/Bioconductor packages, and the release
@@ -80,15 +80,15 @@ Rscript --version
 
 ### Step 3 — Download the release installer
 
-The v1.1.0 Release currently provides the Linux x86_64 installer and its SHA256
+The v2.0.0 Release currently provides the Linux x86_64 installer and its SHA256
 file. Download both files into a separate directory:
 
 ```bash
-mkdir -p "$HOME/taego-downloads/1.1.0"
-cd "$HOME/taego-downloads/1.1.0"
-curl -LO https://github.com/Bioinfo-b/TaeGO/releases/download/v1.1.0/TaeGO-1.1.0-Linux-x86_64.sh
-curl -LO https://github.com/Bioinfo-b/TaeGO/releases/download/v1.1.0/TaeGO-1.1.0-Linux-x86_64.sh.sha256
-ls -lh TaeGO-1.1.0-Linux-x86_64.sh*
+mkdir -p "$HOME/taego-downloads/2.0.0"
+cd "$HOME/taego-downloads/2.0.0"
+curl -LO https://github.com/Bioinfo-b/TaeGO/releases/download/v2.0.0/TaeGO-2.0.0-Linux-x86_64.sh
+curl -LO https://github.com/Bioinfo-b/TaeGO/releases/download/v2.0.0/TaeGO-2.0.0-Linux-x86_64.sh.sha256
+ls -lh TaeGO-2.0.0-Linux-x86_64.sh*
 ```
 
 ### Step 4 — Verify the installer before running it
@@ -96,13 +96,13 @@ ls -lh TaeGO-1.1.0-Linux-x86_64.sh*
 Run the checksum check from the download directory:
 
 ```bash
-sha256sum -c TaeGO-1.1.0-Linux-x86_64.sh.sha256
+sha256sum -c TaeGO-2.0.0-Linux-x86_64.sh.sha256
 ```
 
 The expected result is:
 
 ```text
-TaeGO-1.1.0-Linux-x86_64.sh: OK
+TaeGO-2.0.0-Linux-x86_64.sh: OK
 ```
 
 If the result is not `OK`, do not run the installer. Delete the incomplete
@@ -114,7 +114,7 @@ Keep the environment active and pass its prefix explicitly:
 
 ```bash
 micromamba activate taego
-bash TaeGO-1.1.0-Linux-x86_64.sh --prefix "$CONDA_PREFIX"
+bash TaeGO-2.0.0-Linux-x86_64.sh --prefix "$CONDA_PREFIX"
 hash -r
 ```
 
@@ -168,8 +168,8 @@ installing TaeGO:
    prefix:
 
    ```bash
-   sha256sum -c TaeGO-1.1.0-Linux-x86_64.sh.sha256
-   sudo bash TaeGO-1.1.0-Linux-x86_64.sh --prefix "$TAEGO_PREFIX"
+   sha256sum -c TaeGO-2.0.0-Linux-x86_64.sh.sha256
+   sudo bash TaeGO-2.0.0-Linux-x86_64.sh --prefix "$TAEGO_PREFIX"
    ```
 
 3. Make the launcher available to users through a symlink:
@@ -177,7 +177,7 @@ installing TaeGO:
    ```bash
    sudo ln -sfn "$TAEGO_PREFIX/bin/taego" /usr/local/bin/taego
    sudo chmod a+rx "$TAEGO_PREFIX"
-   sudo chmod -R a+rX "$TAEGO_PREFIX/share/taego/1.1.0"
+   sudo chmod -R a+rX "$TAEGO_PREFIX/share/taego/2.0.0"
    ```
 
 4. As each user, confirm that the shared runtime is readable and run:
@@ -271,7 +271,7 @@ taego doctor
 ### Checksum verification fails
 
 Do not execute the installer. Re-download the installer and matching checksum
-file from the [v1.1.0 Release](https://github.com/Bioinfo-b/TaeGO/releases/tag/v1.1.0)
+file from the [v2.0.0 Release](https://github.com/Bioinfo-b/TaeGO/releases/tag/v2.0.0)
 and run `sha256sum -c` again.
 
 ### No genes are mapped

@@ -24,7 +24,7 @@ suppressMessages({
   library(AnnotationDbi)
 })
 
-TAEGO_VERSION <- "1.1.0"
+TAEGO_VERSION <- "2.0.0"
 MIN_GS <- 5
 MAX_GS <- 1200
 FDR_CUTOFF <- 0.05
@@ -78,6 +78,7 @@ write_kv_tsv <- function(path, keys, values) {
 DIR <- get_script_dir()
 DATA_DIR <- normalizePath(file.path(DIR, "..", "data"), mustWork = TRUE)
 ANNOT_FILE <- file.path(DATA_DIR, "wheat_union6_propagated_gene2go.tsv")
+ANIMAL_EXCLUSIVE_FILE <- file.path(DATA_DIR, "wheat_animal_exclusive_go_2024-09-08.tsv")
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 2) {
@@ -92,6 +93,8 @@ sig_csv <- paste0(out_prefix, "_sig.csv")
 summary_tsv <- paste0(out_prefix, "_input_summary.tsv")
 unmapped_txt <- paste0(out_prefix, "_unmapped_genes.txt")
 metadata_tsv <- paste0(out_prefix, "_run_metadata.tsv")
+animal_filter_summary_tsv <- paste0(out_prefix, "_animal_filter_summary.tsv")
+animal_blocked_tsv <- paste0(out_prefix, "_animal_blocked_pairs.tsv")
 
 cat("============================================\n")
 cat("TaeGO wheat GO enrichment\n")
@@ -106,11 +109,13 @@ annot <- read.table(
   col.names = c("gene", "go"),
   stringsAsFactors = FALSE
 )
+raw_annotation_pairs <- nrow(annot)
+raw_annotation_genes <- length(unique(annot$gene))
 annot <- annot %>% distinct(gene, go)
 annot_genes <- unique(annot$gene)
-cat(sprintf("      annotation: %d pairs, %d genes\n", nrow(annot), length(annot_genes)))
+cat(sprintf("      annotation: %d raw pairs, %d raw genes\n", raw_annotation_pairs, raw_annotation_genes))
 
-cat("[2/5] Resolving GO namespaces and names...\n")
+cat("[2/6] Resolving GO namespaces and names...\n")
 go_info <- AnnotationDbi::select(
   GO.db,
   keys = unique(annot$go),
@@ -124,7 +129,127 @@ annot <- annot %>%
   dplyr::filter(!is.na(namespace)) %>%
   distinct(gene, go, .keep_all = TRUE)
 
-cat("[3/5] Reading foreground/background...\n")
+if (!file.exists(ANIMAL_EXCLUSIVE_FILE)) {
+  stop(
+    "Required animal-exclusive GO resource is missing: ",
+    ANIMAL_EXCLUSIVE_FILE,
+    ". Refusing to run unfiltered wheat enrichment."
+  )
+}
+
+cat("[3/6] Applying official animal-only GO taxon filter...\n")
+animal_go <- read.delim(
+  ANIMAL_EXCLUSIVE_FILE,
+  header = TRUE,
+  stringsAsFactors = FALSE,
+  quote = "",
+  comment.char = "",
+  check.names = FALSE
+)
+required_animal_columns <- c(
+  "GO", "GO_name", "status", "constraint_details", "go_release",
+  "target_taxon", "animal_constraint_taxa", "animal_constraint_names",
+  "filter_rule"
+)
+if (!all(required_animal_columns %in% names(animal_go))) {
+  stop(
+    "Animal-exclusive GO resource has an incompatible schema; found: ",
+    paste(names(animal_go), collapse = ", ")
+  )
+}
+if (anyDuplicated(animal_go$GO) > 0) {
+  stop("Animal-exclusive GO resource contains duplicate GO identifiers.")
+}
+if (any(animal_go$status != "BLOCK_IN_TAXON")) {
+  stop("Animal-exclusive GO resource contains a status other than BLOCK_IN_TAXON.")
+}
+if (any(animal_go$go_release != "2024-09-08") ||
+    any(animal_go$target_taxon != "NCBITaxon:4565")) {
+  stop("Animal-exclusive GO resource has an unexpected GO release or target taxon.")
+}
+if (any(animal_go$filter_rule != "BLOCK_IN_TAXON+RO:0002162+NCBI_animal_taxon")) {
+  stop("Animal-exclusive GO resource contains an unsupported filter rule.")
+}
+
+animal_go_map <- animal_go %>%
+  dplyr::select(
+    GO, GO_name, constraint_details, animal_constraint_taxa,
+    animal_constraint_names, filter_rule
+  ) %>%
+  distinct()
+
+annot_with_animal_filter <- annot %>%
+  left_join(animal_go_map, by = c("go" = "GO"), relationship = "many-to-one")
+
+animal_blocked_pairs <- annot_with_animal_filter %>%
+  dplyr::filter(!is.na(filter_rule)) %>%
+  dplyr::select(
+    gene, go, namespace, TERM, GO_name, constraint_details,
+    animal_constraint_taxa, animal_constraint_names, filter_rule
+  )
+
+animal_filter_summary <- data.frame(
+  metric = c(
+    "annotation_pairs_before_go_db_filter",
+    "annotation_genes_before_go_db_filter",
+    "valid_go_pairs_after_go_db_filter",
+    "valid_go_genes_after_go_db_filter",
+    "animal_exclusive_pairs_removed",
+    "animal_exclusive_genes_affected",
+    "animal_exclusive_go_terms_removed",
+    "pairs_retained_after_animal_filter",
+    "genes_retained_after_animal_filter",
+    "animal_filter_resource",
+    "animal_filter_rule",
+    "go_release",
+    "target_taxon"
+  ),
+  value = c(
+    raw_annotation_pairs,
+    raw_annotation_genes,
+    nrow(annot),
+    length(unique(annot$gene)),
+    nrow(animal_blocked_pairs),
+    length(unique(animal_blocked_pairs$gene)),
+    length(unique(animal_blocked_pairs$go)),
+    nrow(annot_with_animal_filter) - nrow(animal_blocked_pairs),
+    length(unique(annot_with_animal_filter$gene[is.na(annot_with_animal_filter$filter_rule)])),
+    ANIMAL_EXCLUSIVE_FILE,
+    "BLOCK_IN_TAXON+RO:0002162+NCBI_animal_taxon",
+    "2024-09-08",
+    "NCBITaxon:4565"
+  ),
+  stringsAsFactors = FALSE
+)
+write.table(
+  animal_filter_summary,
+  animal_filter_summary_tsv,
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE
+)
+write.table(
+  animal_blocked_pairs,
+  animal_blocked_tsv,
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE
+)
+
+annot <- annot_with_animal_filter %>%
+  dplyr::filter(is.na(filter_rule)) %>%
+  dplyr::select(-GO_name, -constraint_details, -animal_constraint_taxa,
+                -animal_constraint_names, -filter_rule)
+annot_genes <- unique(annot$gene)
+cat(sprintf(
+  "      removed %d animal-exclusive pairs (%d genes; %d GO terms); retained %d pairs\n",
+  nrow(animal_blocked_pairs),
+  length(unique(animal_blocked_pairs$gene)),
+  length(unique(animal_blocked_pairs$go)),
+  nrow(annot)
+))
+
+cat("[4/6] Reading foreground/background...\n")
 fg_info <- read_gene_list(fg_file)
 fg <- fg_info$genes
 
@@ -170,13 +295,18 @@ write_kv_tsv(
   c(
     "taego_version", "module", "annotation_resource", "statistical_test",
     "multiple_testing", "correction_scope", "min_gene_set_size",
-    "max_gene_set_size", "fdr_cutoff", "R", "clusterProfiler", "GO.db",
-    "dplyr", "AnnotationDbi"
+    "max_gene_set_size", "fdr_cutoff", "animal_filter",
+    "animal_filter_resource", "animal_filter_rule", "target_taxon",
+    "go_taxon_release", "R", "clusterProfiler", "GO.db", "dplyr",
+    "AnnotationDbi"
   ),
   c(
     TAEGO_VERSION, "wheat", basename(ANNOT_FILE), "hypergeometric_ORA",
     "Benjamini-Hochberg", "BP_MF_CC_separate_TGT_calibrated", MIN_GS,
-    MAX_GS, FDR_CUTOFF, as.character(getRversion()),
+    MAX_GS, FDR_CUTOFF, "official_GO_taxon_constraints_animal_only",
+    basename(ANIMAL_EXCLUSIVE_FILE),
+    "BLOCK_IN_TAXON+RO:0002162+NCBI_animal_taxon", "NCBITaxon:4565",
+    "2024-09-08", as.character(getRversion()),
     safe_version("clusterProfiler"), safe_version("GO.db"), safe_version("dplyr"),
     safe_version("AnnotationDbi")
   )
@@ -188,7 +318,7 @@ if (length(fg_in) == 0) {
   stop("No foreground genes are present in the effective annotated background; check wheat IWGSC RefSeq v2.1 gene IDs.")
 }
 
-cat("[4/5] Enrichment (minGSSize=5, maxGSSize=1200, BH within BP/MF/CC)...\n")
+cat("[5/6] Enrichment (minGSSize=5, maxGSSize=1200, BH within BP/MF/CC)...\n")
 res_all <- list()
 for (ns_val in c("biological_process", "molecular_function", "cellular_component")) {
   sub <- annot %>% dplyr::filter(namespace == ns_val)
@@ -227,7 +357,7 @@ if (length(res_all) == 0) {
     arrange(p.adjust)
 }
 
-cat("[5/5] Writing results...\n")
+cat("[6/6] Writing results...\n")
 res_sig <- if (nrow(res) == 0) res else res %>% dplyr::filter(p.adjust < FDR_CUTOFF)
 write.csv(res, all_csv, row.names = FALSE)
 write.csv(res_sig, sig_csv, row.names = FALSE)
@@ -241,6 +371,9 @@ if (nrow(res) > 0) {
   cat(sprintf("  CC: %d (significant %d)\n", sum(res$ONTOLOGY == "CC"), sum(res_sig$ONTOLOGY == "CC")))
 }
 cat(sprintf("All results: %s\nSignificant results: %s\n", all_csv, sig_csv))
-cat(sprintf("Input summary: %s\nUnmapped genes: %s\nRun metadata: %s\n",
-            summary_tsv, unmapped_txt, metadata_tsv))
+cat(sprintf(
+  "Input summary: %s\nUnmapped genes: %s\nRun metadata: %s\nAnimal filter summary: %s\nAnimal blocked pairs: %s\n",
+  summary_tsv, unmapped_txt, metadata_tsv, animal_filter_summary_tsv,
+  animal_blocked_tsv
+))
 cat("============================================\n")
